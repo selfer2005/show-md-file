@@ -3,36 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MD文件浏览器</title>
+    <title>MD文件浏览器 - Vue 3</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="sidebar">
-            <h2>MD文件列表</h2>
-            <div class="search-box">
-                <input type="text" id="search-input" placeholder="搜索文件...">
-            </div>
-            <div class="file-list" id="file-list">
-                {% for file in md_files %}
-                <div class="file-item" data-path="{{ file.path }}" data-name="{{ file.full_file_name }}">
-                    <div class="file-dir">{{ file.dir_name }}</div>
-                    <div class="file-name">{{ file.full_file_name }}</div>
-                    <div class="file-time">{{ file.formatted_time }}</div>
+    <div id="app">
+        <div class="container">
+            <!-- 侧边栏 -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        MD文件列表
+                    </h2>
+                    <div class="file-count">共 {{ totalFiles }} 个文件</div>
                 </div>
-                {% endfor %}
+                
+                <div class="search-box">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input 
+                        type="text" 
+                        v-model="searchQuery" 
+                        placeholder="搜索文件..."
+                        @input="handleSearch"
+                    >
+                    <span v-if="searchQuery" class="clear-search" @click="clearSearch">×</span>
+                </div>
+                
+                <div class="file-list">
+                    <transition-group name="list" tag="div">
+                        <div 
+                            v-for="file in filteredFiles" 
+                            :key="file.path"
+                            class="file-item"
+                            :class="{ active: selectedFile && selectedFile.path === file.path }"
+                            @click="selectFile(file)"
+                        >
+                            <div class="file-dir" v-if="file.dir_name">
+                                <svg class="folder-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                {{ file.dir_name }}
+                            </div>
+                            <div class="file-name">{{ file.full_file_name }}</div>
+                            <div class="file-time">
+                                <svg class="clock-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                {{ file.formatted_time }}
+                            </div>
+                        </div>
+                    </transition-group>
+                    
+                    <div v-if="filteredFiles.length === 0" class="no-results">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <p>未找到匹配的文件</p>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="content">
-            <div class="content-header">
-                <h2>MD文件内容</h2>
-            </div>
-            <div class="markdown-content" id="markdown-content">
-                <p>请选择一个MD文件查看内容</p>
+            
+            <!-- 内容区 -->
+            <div class="content">
+                <div class="content-header">
+                    <div v-if="selectedFile">
+                        <h2>{{ selectedFile.full_file_name }}</h2>
+                        <div class="file-meta">
+                            <span class="file-path">{{ selectedFile.path }}</span>
+                            <span class="file-date">{{ selectedFile.formatted_time }}</span>
+                        </div>
+                    </div>
+                    <h2 v-else>MD文件内容</h2>
+                </div>
+                
+                <div class="markdown-content">
+                    <div v-if="loading" class="loading">
+                        <div class="spinner"></div>
+                        <p>加载中...</p>
+                    </div>
+                    
+                    <div v-else-if="error" class="error-message">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p>{{ error }}</p>
+                    </div>
+                    
+                    <div v-else-if="!selectedFile" class="welcome-message">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <h3>欢迎使用 MD 文件浏览器</h3>
+                        <p>请从左侧列表选择一个 Markdown 文件查看内容</p>
+                    </div>
+                    
+                    <div v-else v-html="markdownContent" class="markdown-body"></div>
+                </div>
             </div>
         </div>
     </div>
 
+    <script>
+        const mdFiles = {{ md_files | tojson }};
+    </script>
     <script src="/static/js/script.js"></script>
 </body>
 </html>

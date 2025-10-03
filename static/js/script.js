@@ -1,53 +1,81 @@
-// 格式化所有时间显示
-document.addEventListener('DOMContentLoaded', function() {
-    // 获取所有文件项
-    const fileItems = document.querySelectorAll('.file-item');
-    
-    // 为每个文件项添加点击事件
-    fileItems.forEach(item => {
-        item.addEventListener('click', function() {
-            // 移除所有项的active类
-            fileItems.forEach(i => i.classList.remove('active'));
-            
-            // 为当前点击项添加active类
-            this.classList.add('active');
-            
-            // 获取文件路径
-            const filePath = this.getAttribute('data-path');
-            
-            // 发送请求获取MD文件内容
-            fetch(`/md-content/${filePath}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        document.getElementById('markdown-content').innerHTML = `<p style="color: red;">错误: ${data.error}</p>`;
-                    } else {
-                        document.getElementById('markdown-content').innerHTML = data.content;
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('markdown-content').innerHTML = `<p style="color: red;">加载文件时出错: ${error}</p>`;
-                });
+const { createApp, ref, computed, onMounted } = Vue;
+
+createApp({
+    setup() {
+        // 响应式数据
+        const files = ref(mdFiles || []);
+        const searchQuery = ref('');
+        const selectedFile = ref(null);
+        const markdownContent = ref('');
+        const loading = ref(false);
+        const error = ref(null);
+
+        // 计算属性
+        const totalFiles = computed(() => files.value.length);
+
+        const filteredFiles = computed(() => {
+            if (!searchQuery.value.trim()) {
+                return files.value;
+            }
+            const query = searchQuery.value.toLowerCase();
+            return files.value.filter(file => 
+                file.full_file_name.toLowerCase().includes(query) ||
+                (file.dir_name && file.dir_name.toLowerCase().includes(query))
+            );
         });
-    });
-    
-    // 添加搜索功能
-    const searchInput = document.getElementById('search-input');
-    const fileList = document.getElementById('file-list');
-    
-    if (searchInput && fileList) {
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            const items = fileList.querySelectorAll('.file-item');
-            
-            items.forEach(item => {
-                const fileName = item.getAttribute('data-name').toLowerCase();
-                if (fileName.includes(searchTerm)) {
-                    item.style.display = 'block';
+
+        // 方法
+        const handleSearch = () => {
+            // 搜索时重置选中
+            if (selectedFile.value && !filteredFiles.value.some(f => f.path === selectedFile.value.path)) {
+                selectedFile.value = null;
+                markdownContent.value = '';
+            }
+        };
+
+        const clearSearch = () => {
+            searchQuery.value = '';
+        };
+
+        const selectFile = async (file) => {
+            selectedFile.value = file;
+            loading.value = true;
+            error.value = null;
+            markdownContent.value = '';
+
+            try {
+                const response = await fetch(`/md-content/${file.path}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    error.value = `错误: ${data.error}`;
                 } else {
-                    item.style.display = 'none';
+                    markdownContent.value = data.content;
                 }
-            });
+            } catch (err) {
+                error.value = `加载文件时出错: ${err.message}`;
+            } finally {
+                loading.value = false;
+            }
+        };
+
+        // 生命周期钩子
+        onMounted(() => {
+            console.log(`✨ Vue 3 应用已启动，共加载 ${files.value.length} 个文件`);
         });
+
+        return {
+            files,
+            searchQuery,
+            selectedFile,
+            markdownContent,
+            loading,
+            error,
+            totalFiles,
+            filteredFiles,
+            handleSearch,
+            clearSearch,
+            selectFile
+        };
     }
-});
+}).mount('#app');
