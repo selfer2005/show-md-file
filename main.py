@@ -22,7 +22,10 @@ config = configparser.ConfigParser()
 config.read('env.ini', encoding='utf-8')
 
 # 从配置文件获取根目录，如果配置文件不存在或配置项不存在，则使用默认值
-ROOT_DIR = config.get('settings', 'scanfolder', fallback='../fc_aliyun')
+# 支持多个目录，用逗号分隔
+ROOT_DIRS_STR = config.get('settings', 'scanfolder', fallback='../fc_aliyun')
+# 分割并清理目录路径
+ROOT_DIRS = [d.strip() for d in ROOT_DIRS_STR.split(',') if d.strip()]
 HOST = config.get('settings', 'host', fallback='0.0.0.0')
 PORT = config.getint('settings', 'port', fallback=8000)
 
@@ -58,6 +61,8 @@ def scan_md_files(root_dir):
         
         md_files.append({
             "path": str(relative_path).replace("\\", "/"),  # 统一使用正斜杠
+            "absolute_path": str(file_path),  # 保存绝对路径用于后续读取
+            "root_dir": str(root_path),  # 保存根目录
             "dir_name": dir_name,
             "file_name": file_name,
             "full_file_name": full_file_name,
@@ -70,21 +75,59 @@ def scan_md_files(root_dir):
     
     return md_files
 
+# 全局变量：用于存储文件路径映射（相对路径 -> 绝对路径）
+file_path_map = {}
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    # 扫描MD文件
-    md_files = scan_md_files(ROOT_DIR)
+    global file_path_map
+    file_path_map.clear()  # 清空旧的映射
+    
+    # 扫描所有配置的目录
+    all_md_files = []
+    for idx, root_dir in enumerate(ROOT_DIRS):
+        md_files = scan_md_files(root_dir)
+        
+        # 为每个文件创建唯一的路径标识
+        for file_info in md_files:
+            # 使用 根目录索引::相对路径 作为唯一标识
+            unique_path = f"{idx}::{file_info['path']}"
+            file_info['unique_path'] = unique_path
+            # 保存映射关系
+            file_path_map[unique_path] = file_info['absolute_path']
+            # 前端使用 unique_path 作为 path
+            file_info['path'] = unique_path
+            # 添加根目录标识（方便前端显示）
+            file_info['root_dir_name'] = Path(root_dir).name if Path(root_dir).name else root_dir
+        
+        all_md_files.extend(md_files)
+    
+    # 按修改时间降序排序（最新的在前面）
+    all_md_files.sort(key=lambda x: x['modified_time'], reverse=True)
     
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "md_files": md_files,
-        "root_dir": ROOT_DIR
+        "md_files": all_md_files,
+        "root_dirs": ROOT_DIRS  # 传递所有目录
     })
 
 @app.get("/md-content/{file_path:path}")
 async def get_md_content(file_path: str):
     """获取指定MD文件的内容"""
-    full_path = Path(ROOT_DIR) / file_path
+    # 从映射表中获取绝对路径
+    if file_path in file_path_map:
+        full_path = Path(file_path_map[file_path])
+    else:
+        # 兼容旧的路径格式（尝试在所有根目录中查找）
+        full_path = None
+        for root_dir in ROOT_DIRS:
+            test_path = Path(root_dir) / file_path
+            if test_path.exists() and test_path.is_file():
+                full_path = test_path
+                break
+        
+        if not full_path:
+            return {"error": "File not found"}
     
     if not full_path.exists() or not full_path.is_file():
         return {"error": "File not found"}

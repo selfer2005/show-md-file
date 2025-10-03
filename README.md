@@ -42,14 +42,25 @@ pip install -r requirements.txt
 
 ```ini
 [settings]
-# 要扫描的根目录路径
+# 要扫描的根目录路径（多个目录用逗号分隔）
 scanfolder=../fc_aliyun
+
+# 多目录示例（用逗号分隔）
+# scanfolder=D:\documents\,E:\projects\,C:\notes\
 
 # 服务器监听端口
 port=8000
 
 # 服务器主机地址
 host=0.0.0.0
+```
+
+### 多目录配置
+
+支持同时扫描多个目录，只需用逗号分隔：
+
+```ini
+scanfolder=D:\dir1\,D:\dir2\,D:\dir3\
 ```
 
 ## 使用方法
