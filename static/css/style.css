@@ -68,23 +68,29 @@ body {
 /* ========== 侧边栏样式 ========== */
 .sidebar {
     width: 320px;
+    min-width: 320px;
     background: linear-gradient(180deg, var(--sidebar-bg) 0%, #243342 100%);
     color: var(--text-light);
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-lg);
     z-index: 100;
-    transition: transform 0.3s ease, width 0.3s ease;
+    transition: margin-left 0.3s ease, opacity 0.3s ease;
+    margin-left: 0;
+    opacity: 1;
 }
 
 /* 侧边栏收缩状态 */
 .sidebar.collapsed {
-    transform: translateX(-100%);
-    width: 0;
+    margin-left: -320px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .container.sidebar-collapsed .sidebar {
-    transform: translateX(-100%);
+    margin-left: -320px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .sidebar-header {
@@ -627,6 +633,7 @@ body {
 @media (max-width: 768px) {
     .sidebar {
         width: 280px;
+        min-width: 280px;
         position: absolute;
         left: 0;
         top: 0;
@@ -635,7 +642,9 @@ body {
     }
     
     .sidebar.collapsed {
-        transform: translateX(-100%);
+        margin-left: -280px;
+        opacity: 0;
+        pointer-events: none;
     }
     
     .markdown-content {
@@ -660,6 +669,7 @@ body {
     .sidebar {
         width: 100%;
         max-width: 280px;
+        min-width: 280px;
         position: absolute;
         left: 0;
         top: 0;
@@ -668,7 +678,9 @@ body {
     }
     
     .sidebar.collapsed {
-        transform: translateX(-100%);
+        margin-left: -280px;
+        opacity: 0;
+        pointer-events: none;
     }
     
     .content {
