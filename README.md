@@ -1,85 +1,79 @@
-# MD文件浏览器
+# show-md-file
 
-这是一个基于FastAPI的简单Web应用程序，用于浏览指定目录下的所有Markdown文件。
+`show-md-file` 是一个基于 **FastAPI** 的 Markdown 浏览器，可以批量扫描指定目录下的 `.md` 文件并在浏览器中即时预览内容。新版界面经过全面优化，在桌面与移动端之间无缝切换，提供更优雅、舒适的阅读体验。
 
-## 功能特性
+## 功能亮点
 
-- 自动扫描指定目录及其子目录下的所有.md文件
-- 在左侧栏以树形结构显示所有MD文件
-- 点击文件名在右侧显示文件内容
-- 支持Markdown语法渲染（标题、列表、代码块等）
-- 支持配置文件自定义扫描目录
+- **目录自动扫描**：递归遍历配置的根目录及其子目录中所有 Markdown 文件。
+- **即时预览**：点击任意文件即可在右侧（或移动端的主区域）渲染 Markdown 内容。
+- **文件信息展示**：同步显示文件所在目录、名称与最后修改时间，便于定位与比较。
+- **快速搜索**：支持实时关键字过滤，并提供友好的空状态提示。
+- **响应式界面**：侧边目录在桌面端常驻显示，移动端可通过顶部“汉堡”按钮展开/收起，阅读区自动适配屏幕。
+- **操作日志**：项目根目录新增 `update.md`，用于记录关键操作和时间戳，方便追踪更新轨迹。
 
-## 目录结构
+## 项目结构
 
 ```
 show-md-file/
-├── main.py              # FastAPI主应用
-├── requirements.txt     # 依赖包列表
-├── env.ini             # 配置文件
-├── restart.ps1         # PowerShell重启脚本
-├── restart.bat         # Windows批处理重启脚本（备用）
-├── run.log             # 运行日志文件
-├── README.md            # 说明文档
+├── env.ini               # 运行配置
+├── main.py               # FastAPI 应用入口
+├── requirements.txt      # 依赖清单
+├── README.md             # 使用说明（当前文件）
+├── restart.bat           # Windows 批处理启动脚本
+├── restart.ps1           # PowerShell 启动脚本
+├── run.log               # 运行日志
+├── static/
+│   ├── css/style.css     # 前端样式表
+│   └── js/script.js      # 前端交互脚本
 ├── templates/
-│   └── index.html       # 主页面模板
-└── static/
-    ├── css/
-    │   └── style.css    # 样式文件
-    └── js/
-        └── script.js    # JavaScript交互脚本
+│   └── index.html        # Jinja2 模板
+└── update.md             # 操作记录（带时间戳）
 ```
 
-## 安装依赖
+## 环境准备
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 配置
+## 运行方式
 
-编辑 `env.ini` 文件来配置应用：
+1. 根据需求编辑 `env.ini`：
 
-```ini
-[settings]
-# 要扫描的根目录路径
-scanfolder=../fc_aliyun
+   ```ini
+   [settings]
+   # 需要扫描的目录
+   scanfolder=../fc_aliyun
 
-# 服务器监听端口
-port=8000
+   # 服务监听配置
+   host=0.0.0.0
+   port=8000
+   ```
 
-# 服务器主机地址
-host=0.0.0.0
-```
+2. 启动服务：
 
-## 使用方法
+   - **Windows**：推荐双击 `restart.ps1`，自动停止旧进程、启动新实例并写入 `run.log`。
+   - **跨平台**：在命令行执行 `python main.py`。
 
-### Windows系统
+3. 浏览器访问 `http://localhost:8000` 即可使用。
 
-双击运行 `restart.ps1` 脚本（推荐），它会：
-1. 自动结束当前目录下已存在的应用进程
-2. 启动新的应用实例
-3. 记录操作日志到 `run.log` 文件
+## 界面说明
 
-或者双击运行 `restart.bat` 脚本（备用方案）
+- **桌面端**：左侧常驻目录树，右侧为内容区。选中条目后自动高亮，并滚动到正文顶部。
+- **移动端**：顶部汉堡按钮用于展开目录；选择文件后目录自动收起，主区域充满屏幕便于阅读。
+- **搜索体验**：输入框实时过滤文件名称，若无匹配项会显示提示信息；清空搜索即可恢复列表。
+- **提示状态**：内容区在加载或出现错误时会展示不同色调的提示块，方便快速判断当前状态。
 
-### 其他系统
+## 技术栈
 
-```bash
-python main.py
-```
-
-## 访问应用
-
-启动后，在浏览器中访问：http://localhost:8000
-
-## 依赖包
-
-- FastAPI: Web框架
-- Uvicorn: ASGI服务器
-- Jinja2: 模板引擎
-- Markdown: Markdown解析器
+- FastAPI + Uvicorn：提供高效的 API 与服务能力。
+- Jinja2：渲染页面模板。
+- Markdown：负责 Markdown 文本解析。
+- 现代化前端布局：Flexbox、CSS 变量与媒体查询确保跨终端体验一致。
 
 ## 日志
 
-所有操作日志记录在 `run.log` 文件中。
+- 所有运行日志写入 `run.log`。
+- 所有关键操作与命令记录在 `update.md`，方便复盘与追踪。
+
+欢迎继续定制界面或扩展其他能力，例如收藏夹、文件置顶、主题切换等。

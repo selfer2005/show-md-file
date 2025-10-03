@@ -7,31 +7,65 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="sidebar">
-            <h2>MD文件列表</h2>
-            <div class="search-box">
-                <input type="text" id="search-input" placeholder="搜索文件...">
-            </div>
-            <div class="file-list" id="file-list">
-                {% for file in md_files %}
-                <div class="file-item" data-path="{{ file.path }}" data-name="{{ file.full_file_name }}">
-                    <div class="file-dir">{{ file.dir_name }}</div>
-                    <div class="file-name">{{ file.full_file_name }}</div>
-                    <div class="file-time">{{ file.formatted_time }}</div>
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar" aria-label="Markdown 文件目录">
+            <div class="sidebar-header">
+                <div class="sidebar-brand" aria-label="show-md-file">
+                    <span class="brand-pill">show</span>
+                    <span class="brand-pill brand-pill--accent">md</span>
+                    <span class="brand-pill">file</span>
                 </div>
-                {% endfor %}
+                <button class="sidebar-close" type="button" id="sidebar-close" aria-label="关闭目录">
+                    <span aria-hidden="true">×</span>
+                </button>
             </div>
-        </div>
-        <div class="content">
-            <div class="content-header">
-                <h2>MD文件内容</h2>
+            <div class="sidebar-search">
+                <label class="visually-hidden" for="search-input">搜索 Markdown 文件</label>
+                <div class="sidebar-search__wrapper">
+                    <span class="sidebar-search__icon" aria-hidden="true">🔍</span>
+                    <input type="text" id="search-input" placeholder="搜索文件..." autocomplete="off">
+                </div>
             </div>
-            <div class="markdown-content" id="markdown-content">
-                <p>请选择一个MD文件查看内容</p>
-            </div>
+            <nav class="sidebar-files" aria-label="Markdown 文件列表">
+                <ul class="file-list" id="file-list">
+                    {% for file in md_files %}
+                    <li class="file-list__item">
+                        <button type="button" class="file-item" data-path="{{ file.path }}" data-name="{{ file.full_file_name }}">
+                            <span class="file-item__name">{{ file.full_file_name }}</span>
+                            <span class="file-item__meta">
+                                <span class="file-item__dir">{{ file.dir_name }}</span>
+                                <span class="file-item__time">{{ file.formatted_time }}</span>
+                            </span>
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="file-list__empty" id="file-list-empty" role="status" aria-live="polite" hidden>未找到匹配的文件</p>
+            </nav>
+        </aside>
+
+        <div class="app-main">
+            <header class="topbar">
+                <button class="sidebar-toggle" type="button" id="sidebar-toggle" aria-controls="sidebar" aria-expanded="false" aria-label="展开或收起文件列表">
+                    <span class="sidebar-toggle__bar"></span>
+                    <span class="sidebar-toggle__bar"></span>
+                    <span class="sidebar-toggle__bar"></span>
+                </button>
+                <div class="topbar-headings">
+                    <p class="topbar-subtitle">show-md-file</p>
+                    <h1 class="topbar-title">Markdown 浏览面板</h1>
+                </div>
+            </header>
+
+            <main class="content" role="main">
+                <article class="markdown-content" id="markdown-content" aria-live="polite">
+                    <p>请选择左侧的 Markdown 文件以查看内容。</p>
+                </article>
+            </main>
         </div>
     </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <script src="/static/js/script.js"></script>
 </body>
