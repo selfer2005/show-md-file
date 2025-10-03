@@ -9,6 +9,7 @@ createApp({
         const markdownContent = ref('');
         const loading = ref(false);
         const error = ref(null);
+        const sidebarCollapsed = ref(false);  // 侧边栏收缩状态
 
         // 计算属性
         const totalFiles = computed(() => files.value.length);
@@ -35,6 +36,10 @@ createApp({
 
         const clearSearch = () => {
             searchQuery.value = '';
+        };
+
+        const toggleSidebar = () => {
+            sidebarCollapsed.value = !sidebarCollapsed.value;
         };
 
         const selectFile = async (file) => {
@@ -71,10 +76,12 @@ createApp({
             markdownContent,
             loading,
             error,
+            sidebarCollapsed,
             totalFiles,
             filteredFiles,
             handleSearch,
             clearSearch,
+            toggleSidebar,
             selectFile
         };
     }
