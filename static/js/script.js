@@ -48,6 +48,11 @@ createApp({
             error.value = null;
             markdownContent.value = '';
 
+            // 在移动端选择文件后自动收缩侧边栏
+            if (window.innerWidth <= 768) {
+                sidebarCollapsed.value = true;
+            }
+
             try {
                 const response = await fetch(`/md-content/${file.path}`);
                 const data = await response.json();
