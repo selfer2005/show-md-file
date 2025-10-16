@@ -89,6 +89,121 @@ function Get-AppProcess {
     return $AppProcesses
 }
 
+function Get-PortProcesses {
+    param([int]$Port)
+    
+    $PortProcesses = @()
+    
+    try {
+        # 使用 netstat 查找占用端口的进程
+        $NetstatOutput = netstat -ano | Select-String ":$Port\s"
+        
+        if ($NetstatOutput) {
+            foreach ($Line in $NetstatOutput) {
+                # 提取 PID (最后一列)
+                if ($Line -match "\s+(\d+)\s*$") {
+                    $PID = $Matches[1]
+                    
+                    # 获取进程信息
+                    try {
+                        $Process = Get-Process -Id $PID -ErrorAction SilentlyContinue
+                        if ($Process) {
+                            $PortProcesses += @{
+                                PID = $PID
+                                Name = $Process.Name
+                                Path = $Process.Path
+                                Process = $Process
+                            }
+                        }
+                    } catch {
+                        continue
+                    }
+                }
+            }
+        }
+    } catch {
+        # 忽略错误
+    }
+    
+    # 去重（同一个进程可能有多个连接）
+    $UniqueProcesses = $PortProcesses | Sort-Object -Property PID -Unique
+    
+    return $UniqueProcesses
+}
+
+function Kill-PortProcesses {
+    param([int]$Port)
+    
+    $PortProcesses = Get-PortProcesses -Port $Port
+    
+    if ($PortProcesses.Count -eq 0) {
+        Write-Host "✅ 端口 $Port 未被占用" -ForegroundColor Green
+        return $true
+    }
+    
+    Write-Host "🔍 发现以下进程占用端口 ${Port}:" -ForegroundColor Yellow
+    Write-Host ""
+    
+    foreach ($ProcessInfo in $PortProcesses) {
+        Write-Host "   • PID: $($ProcessInfo.PID)  |  " -NoNewline -ForegroundColor White
+        Write-Host "进程名: $($ProcessInfo.Name)" -ForegroundColor Cyan
+        if ($ProcessInfo.Path) {
+            Write-Host "     路径: $($ProcessInfo.Path)" -ForegroundColor Gray
+        }
+    }
+    
+    Write-Host ""
+    Write-Host "❓ 是否要终止这些进程? " -NoNewline -ForegroundColor Yellow
+    Write-Host "[Y/N]: " -NoNewline -ForegroundColor Cyan
+    $Confirm = Read-Host
+    
+    if ($Confirm -eq 'Y' -or $Confirm -eq 'y') {
+        Write-Host ""
+        Write-Host "🔻 正在终止进程..." -ForegroundColor Yellow
+        
+        $KilledCount = 0
+        foreach ($ProcessInfo in $PortProcesses) {
+            try {
+                Write-Host "   终止进程 PID: $($ProcessInfo.PID) ($($ProcessInfo.Name))..." -NoNewline -ForegroundColor White
+                Stop-Process -Id $ProcessInfo.PID -Force -ErrorAction Stop
+                Write-Host " ✅" -ForegroundColor Green
+                $KilledCount++
+            } catch {
+                Write-Host " ❌" -ForegroundColor Red
+                Write-Host "   错误: $($_.Exception.Message)" -ForegroundColor DarkRed
+            }
+        }
+        
+        if ($KilledCount -gt 0) {
+            Write-Host ""
+            Write-Host "⏳ 等待端口释放..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 2
+            
+            # 再次检查端口
+            $RemainingProcesses = Get-PortProcesses -Port $Port
+            if ($RemainingProcesses.Count -eq 0) {
+                Write-Host "✅ 端口 $Port 已释放 (终止了 $KilledCount 个进程)" -ForegroundColor Green
+                Write-Host ""
+                return $true
+            } else {
+                Write-Host "⚠️  端口仍被占用，还有 $($RemainingProcesses.Count) 个进程" -ForegroundColor Yellow
+                Write-Host ""
+                return $false
+            }
+        } else {
+            Write-Host ""
+            Write-Host "❌ 未能终止任何进程" -ForegroundColor Red
+            Write-Host ""
+            return $false
+        }
+    } else {
+        Write-Host ""
+        Write-Host "❌ 用户取消操作" -ForegroundColor Yellow
+        Write-Host ""
+        return $false
+    }
+}
+
 function Show-Status {
     param([bool]$Detailed = $false)
     
@@ -199,15 +314,22 @@ function Start-App {
         return $false
     }
     
-    # 检查端口占用
-    try {
-        $Connections = netstat -ano | Select-String ":$script:Port\s"
-        if ($Connections) {
-            Write-Host "⚠️  警告: 端口 $script:Port 已被占用！" -ForegroundColor Yellow
-            Write-Host "   服务可能无法正常启动" -ForegroundColor DarkYellow
+    # 检查端口占用，如果被占用则提示用户处理
+    $PortProcesses = Get-PortProcesses -Port $script:Port
+    if ($PortProcesses.Count -gt 0) {
+        Write-Host "⚠️  警告: 端口 $script:Port 已被占用！" -ForegroundColor Yellow
+        Write-Host ""
+        
+        # 调用端口处理函数
+        $PortCleared = Kill-PortProcesses -Port $script:Port
+        
+        if (-not $PortCleared) {
+            Write-Host "❌ 端口未释放，无法启动服务" -ForegroundColor Red
+            Write-Host "   请手动处理端口占用问题或修改配置文件中的端口号" -ForegroundColor Yellow
             Write-Host ""
+            return $false
         }
-    } catch {}
+    }
     
     try {
         # 启动应用
@@ -356,6 +478,7 @@ function Show-Menu {
     Write-Host "  [6] 实时监控" -ForegroundColor White
     Write-Host "  [7] 刷新配置" -ForegroundColor White
     Write-Host "  [8] 在浏览器中打开" -ForegroundColor White
+    Write-Host "  [9] 清理端口占用" -ForegroundColor White
     Write-Host "  [0] 退出" -ForegroundColor White
     Write-Host ""
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkCyan
@@ -427,7 +550,7 @@ while ($true) {
     Show-Status
     Show-Menu
     
-    Write-Host "请选择操作 [0-8]: " -NoNewline -ForegroundColor Yellow
+    Write-Host "请选择操作 [0-9]: " -NoNewline -ForegroundColor Yellow
     $Choice = Read-Host
     Write-Host ""
     
@@ -472,13 +595,20 @@ while ($true) {
             Write-Host "按任意键继续..." -ForegroundColor Gray
             $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         }
+        "9" {
+            Write-Host "🔧 正在检查端口 $script:Port 占用情况..." -ForegroundColor Cyan
+            Write-Host ""
+            $PortCleared = Kill-PortProcesses -Port $script:Port
+            Write-Host "按任意键继续..." -ForegroundColor Gray
+            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        }
         "0" {
             Write-Host "👋 再见！" -ForegroundColor Cyan
             Write-Host ""
             exit 0
         }
         default {
-            Write-Host "⚠️  无效的选择，请输入 0-8 之间的数字" -ForegroundColor Red
+            Write-Host "⚠️  无效的选择，请输入 0-9 之间的数字" -ForegroundColor Red
             Write-Host ""
             Start-Sleep -Seconds 2
         }
