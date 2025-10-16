@@ -14,20 +14,25 @@
 
 ```
 show-md-file/
-├── main.py              # FastAPI主应用
-├── requirements.txt     # 依赖包列表
-├── env.ini             # 配置文件
-├── restart.ps1         # PowerShell重启脚本
-├── restart.bat         # Windows批处理重启脚本（备用）
-├── run.log             # 运行日志文件
-├── README.md            # 说明文档
+├── main.py                    # FastAPI主应用
+├── requirements.txt           # 依赖包列表
+├── env.ini                   # 配置文件
+├── manage.ps1                # 交互式管理脚本（推荐）⭐
+├── 管理.bat                   # 管理脚本快捷启动
+├── 管理脚本使用说明.md         # 详细使用文档
+├── start.ps1                 # PowerShell启动脚本
+├── restart.ps1               # PowerShell重启脚本
+├── restart.bat               # Windows批处理重启脚本（备用）
+├── kill_port.py              # 端口管理工具
+├── run.log                   # 运行日志文件
+├── README.md                  # 说明文档
 ├── templates/
-│   └── index.html       # 主页面模板
+│   └── index.html             # 主页面模板
 └── static/
     ├── css/
-    │   └── style.css    # 样式文件
+    │   └── style.css          # 样式文件
     └── js/
-        └── script.js    # JavaScript交互脚本
+        └── script.js          # JavaScript交互脚本
 ```
 
 ## 安装依赖
@@ -65,14 +70,39 @@ scanfolder=D:\dir1\,D:\dir2\,D:\dir3\
 
 ## 使用方法
 
-### Windows系统
+### Windows系统 - 交互式管理（推荐）⭐
 
-双击运行 `restart.ps1` 脚本（推荐），它会：
-1. 自动结束当前目录下已存在的应用进程
-2. 启动新的应用实例
-3. 记录操作日志到 `run.log` 文件
+**方式一：双击批处理文件**
+```
+管理.bat
+```
 
-或者双击运行 `restart.bat` 脚本（备用方案）
+**方式二：PowerShell命令**
+```powershell
+.\manage.ps1
+```
+
+这将启动一个功能强大的交互式管理界面，提供：
+- 🚀 启动/停止/重启服务
+- 📊 实时状态监控
+- 📝 查看运行日志
+- 🔍 实时监控模式
+- 🌐 一键在浏览器中打开
+- ⚙️ 配置管理
+
+详细使用说明请查看 [管理脚本使用说明.md](管理脚本使用说明.md)
+
+### Windows系统 - 传统方式
+
+**快速启动：**
+```powershell
+.\start.ps1
+```
+
+**重启服务：**
+```powershell
+.\restart.ps1
+```
 
 ### 其他系统
 
