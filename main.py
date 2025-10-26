@@ -26,12 +26,33 @@ config.read('env.ini', encoding='utf-8')
 ROOT_DIRS_STR = config.get('settings', 'scanfolder', fallback='../fc_aliyun')
 # 分割并清理目录路径
 ROOT_DIRS = [d.strip() for d in ROOT_DIRS_STR.split(',') if d.strip()]
+
+# 从配置文件获取要排除的目录
+EXCLUDE_DIRS_STR = config.get('settings', 'exclude_dirs', fallback='node_modules,venv,.venv,__pycache__,.git,dist,build')
+# 分割并清理排除目录名称
+EXCLUDE_DIRS = [d.strip() for d in EXCLUDE_DIRS_STR.split(',') if d.strip()]
+
 HOST = config.get('settings', 'host', fallback='0.0.0.0')
 PORT = config.getint('settings', 'port', fallback=8000)
 
 def format_time(timestamp):
     """将时间戳格式化为可读的日期时间字符串"""
     return time.strftime('%Y-%m-%d %H:%M', time.localtime(timestamp))
+
+def is_excluded_path(path, root_path, exclude_dirs):
+    """检查路径是否应该被排除"""
+    # 获取相对路径
+    try:
+        relative_path = path.relative_to(root_path)
+        # 检查路径中的每一部分是否在排除列表中
+        path_parts = relative_path.parts
+        for part in path_parts:
+            if part in exclude_dirs:
+                return True
+    except ValueError:
+        # 如果路径不在root_path下，则不排除
+        pass
+    return False
 
 def scan_md_files(root_dir):
     """扫描指定目录及其子目录下的所有MD文件"""
@@ -45,6 +66,10 @@ def scan_md_files(root_dir):
     
     # 遍历所有文件
     for file_path in root_path.rglob("*.md"):
+        # 检查是否应该排除此路径
+        if is_excluded_path(file_path, root_path, EXCLUDE_DIRS):
+            continue
+            
         # 获取相对于根目录的路径
         relative_path = file_path.relative_to(root_path)
         # 获取目录名和文件名

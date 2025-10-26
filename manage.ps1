@@ -13,6 +13,7 @@ $script:LogPath = Join-Path $CurrentDir "run.log"
 
 # 全局配置变量
 $script:ScanFolders = @()
+$script:ExcludeDirs = @()
 $script:Port = "8000"
 $script:Host_Address = "0.0.0.0"
 
@@ -29,6 +30,7 @@ function Show-Banner {
 
 function Read-Config {
     $script:ScanFolders = @()
+    $script:ExcludeDirs = @()
     $script:Port = "8000"
     $script:Host_Address = "0.0.0.0"
 
@@ -55,6 +57,10 @@ function Read-Config {
                 if ($Line -match "^scanfolder\s*=\s*(.+)$") {
                     $FoldersStr = $Matches[1].Trim()
                     $script:ScanFolders = $FoldersStr -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+                }
+                elseif ($Line -match "^exclude_dirs\s*=\s*(.+)$") {
+                    $ExcludeDirsStr = $Matches[1].Trim()
+                    $script:ExcludeDirs = $ExcludeDirsStr -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
                 }
                 elseif ($Line -match "^port\s*=\s*(\d+)$") {
                     $script:Port = $Matches[1].Trim()
@@ -252,6 +258,15 @@ function Show-Status {
         }
     } else {
         Write-Host "   (未配置扫描目录)" -ForegroundColor DarkGray
+    }
+    
+    Write-Host ""
+    Write-Host "🚫 排除目录:    " -ForegroundColor Yellow
+    if ($script:ExcludeDirs.Count -gt 0) {
+        $ExcludeDirsDisplay = $script:ExcludeDirs -join ", "
+        Write-Host "   $ExcludeDirsDisplay" -ForegroundColor Cyan
+    } else {
+        Write-Host "   (未配置排除目录)" -ForegroundColor DarkGray
     }
     
     Write-Host ""
