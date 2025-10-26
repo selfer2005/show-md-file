@@ -120,10 +120,17 @@ async def read_root(request: Request):
             file_info['unique_path'] = unique_path
             # 保存映射关系
             file_path_map[unique_path] = file_info['absolute_path']
+            # 保存相对路径用于构建完整显示路径
+            relative_path = file_info['path']
             # 前端使用 unique_path 作为 path
             file_info['path'] = unique_path
             # 添加根目录标识（方便前端显示）
             file_info['root_dir_name'] = Path(root_dir).name if Path(root_dir).name else root_dir
+            # 添加完整路径用于前端显示（根目录 + 相对路径）
+            file_info['display_path'] = str(Path(root_dir) / relative_path).replace("\\", "/")
+            # 添加完整目录路径用于前端显示
+            if file_info['dir_name']:
+                file_info['display_dir'] = str(Path(root_dir) / file_info['dir_name']).replace("\\", "/")
         
         all_md_files.extend(md_files)
     
